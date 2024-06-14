@@ -1,0 +1,308 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import folium
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+path = '/content/drive/MyDrive/Cognify/Dataset.csv'
+df=pd.read_csv(path)
+
+df.head()
+
+print("Column names in the DataFrame:")
+print(df.columns)
+
+for column in df.columns:
+    unique_values = df[column].unique()
+    unique_values_str = ', '.join(map(str, unique_values))
+    print(f"Unique values in column '{column}':")
+    print(f"{unique_values_str}\n")
+
+num_rows, num_cols = df.shape
+print(f"Number of rows: {num_rows}")
+print(f"Number of columns: {num_cols}")
+
+nullcoll = df.isnull().sum()
+print("Missing values in each column:")
+print(nullcoll)
+
+df['Average Cost for two'] = df['Average Cost for two'].astype(int)
+
+rating_counts = df['Aggregate rating'].value_counts()
+print("Distribution of Aggregate ratings:")
+print(rating_counts)
+
+numerical_stats = df.describe()
+print("Basic Statistical Measures for Numerical Columns:")
+print(numerical_stats)
+
+country_counts = df['Country Code'].value_counts()
+print("\nDistribution of Country Code:")
+print(country_counts)
+
+city_counts = df['City'].value_counts()
+print("\nDistribution of City:")
+print(city_counts)
+
+cuisine_counts = df['Cuisines'].value_counts()
+print("\nDistribution of Cuisines:")
+print(cuisine_counts)
+
+map_restaurants = folium.Map(location=[14.55, 121], zoom_start=10)
+
+for idx, row in df.iterrows():
+    folium.Marker([row['Latitude'], row['Longitude']], popup=row['Restaurant Name']).add_to(map_restaurants)
+
+map_restaurants.save('restaurants_map.html')
+
+map_restaurants
+
+plt.figure(figsize=(10, 6))
+df['Country Code'].value_counts().plot(kind='bar')
+plt.title('Distribution of Restaurants by Country')
+plt.xlabel('Country Code')
+plt.ylabel('Number of Restaurants')
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='Longitude', y='Latitude', hue='Aggregate rating', data=df, palette='viridis')
+plt.title('Correlation Between Restaurant Location and Rating')
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.legend(title='Rating')
+plt.tight_layout()
+plt.show()
+
+import pandas as pd
+
+# Select only numerical columns
+numerical_df = df.select_dtypes(include=['number'])
+
+# Calculate basic statistical measures for numerical columns
+numerical_stats = numerical_df.describe()
+print("Numerical Statistics:\n", numerical_stats)
+
+# Calculate the median for numerical columns
+numerical_medians = numerical_df.median()
+print("\nNumerical Medians:\n", numerical_medians)
+
+# Distribution of Country Code
+country_code_counts = df['Country Code'].value_counts()
+print("\nCountry Code Distribution:\n", country_code_counts)
+
+# Distribution of City
+city_counts = df['City'].value_counts()
+print("\nCity Distribution:\n", city_counts)
+
+# Distribution of Cuisines
+cuisines_counts = df['Cuisines'].value_counts()
+print("\nCuisines Distribution:\n", cuisines_counts)
+
+# Top cuisines with the highest number of restaurants
+top_cuisines = df['Cuisines'].value_counts().head(10)
+print("\nTop 10 Cuisines:\n", top_cuisines)
+
+# Top cities with the highest number of restaurants
+top_cities = df['City'].value_counts().head(10)
+print("\nTop 10 Cities:\n", top_cities)
+
+# Calculate the percentage of restaurants offering table booking
+table_booking_percentage = (df['Has Table booking'].value_counts(normalize=True) * 100).to_dict()
+print("Percentage of Restaurants Offering Table Booking:\n", table_booking_percentage)
+
+# Calculate the percentage of restaurants offering online delivery
+online_delivery_percentage = (df['Has Online delivery'].value_counts(normalize=True) * 100).to_dict()
+print("Percentage of Restaurants Offering Online Delivery:\n", online_delivery_percentage)
+
+# Calculate the average rating for restaurants with and without table booking
+average_rating_with_table_booking = df[df['Has Table booking'] == 'Yes']['Aggregate rating'].mean()
+average_rating_without_table_booking = df[df['Has Table booking'] == 'No']['Aggregate rating'].mean()
+
+print("Average Rating with Table Booking:", average_rating_with_table_booking)
+print("Average Rating without Table Booking:", average_rating_without_table_booking)
+
+# Group by price range and calculate the percentage of restaurants offering online delivery
+online_delivery_by_price_range = df.groupby('Price range')['Has Online delivery'].value_counts(normalize=True).unstack().fillna(0) * 100
+
+print("Online Delivery Availability by Price Range:\n", online_delivery_by_price_range)
+
+# Extract the length of the restaurant name
+df['Name Length'] = df['Restaurant Name'].apply(len)
+
+# Extract the length of the address
+df['Address Length'] = df['Address'].apply(len)
+
+# Display the first few rows to verify the new features
+print(df[['Restaurant Name', 'Name Length', 'Address', 'Address Length']].head())
+
+# Create new feature 'Has Table Booking'
+df['Has Table Booking'] = df['Has Table booking'].apply(lambda x: 1 if x == 'Yes' else 0)
+
+# Create new feature 'Has Online Delivery'
+df['Has Online Delivery'] = df['Has Online delivery'].apply(lambda x: 1 if x == 'Yes' else 0)
+
+# Display the first few rows to verify the new features
+print(df[['Has Table booking', 'Has Table Booking', 'Has Online delivery', 'Has Online Delivery']].head())
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+
+# Select relevant features for prediction
+features = ['Price range', 'Has Table Booking', 'Has Online Delivery', 'Name Length', 'Address Length', 'Country Code', 'City']
+target = 'Aggregate rating'
+
+# Handle missing values in the target column
+df = df[df[target].notna()]
+
+# Define numerical and categorical features
+numerical_features = ['Price range', 'Name Length', 'Address Length']
+categorical_features = ['Has Table Booking', 'Has Online Delivery', 'Country Code', 'City']
+
+# Preprocess numerical features
+numerical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='median'))
+])
+
+# Preprocess categorical features
+categorical_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('onehot', OneHotEncoder(handle_unknown='ignore'))
+])
+
+# Combine preprocessing steps
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numerical_transformer, numerical_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Split the data into training and testing sets
+X = df[features]
+y = df[target]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+def evaluate_model(model, X_test, y_test):
+    predictions = model.predict(X_test)
+    mse = mean_squared_error(y_test, predictions)
+    r2 = r2_score(y_test, predictions)
+    print(f'Mean Squared Error: {mse}')
+    print(f'R^2 Score: {r2}')
+
+# Linear Regression
+lr = Pipeline(steps=[('preprocessor', preprocessor),
+                     ('regressor', LinearRegression())])
+lr.fit(X_train, y_train)
+print("Linear Regression Performance:")
+evaluate_model(lr, X_test, y_test)
+
+# Decision Tree
+dt = Pipeline(steps=[('preprocessor', preprocessor),
+                     ('regressor', DecisionTreeRegressor(random_state=42))])
+dt.fit(X_train, y_train)
+print("\nDecision Tree Performance:")
+evaluate_model(dt, X_test, y_test)
+
+# Random Forest
+rf = Pipeline(steps=[('preprocessor', preprocessor),
+                     ('regressor', RandomForestRegressor(random_state=42))])
+rf.fit(X_train, y_train)
+print("\nRandom Forest Performance:")
+evaluate_model(rf, X_test, y_test)
+
+# Ensure 'Cuisines' column does not contain missing values
+df = df[df['Cuisines'].notna()]
+
+# Split cuisines into individual rows (some restaurants offer multiple cuisines)
+df_cuisines = df['Cuisines'].str.split(', ', expand=True).stack().reset_index(level=1, drop=True).to_frame('Cuisine')
+df_cuisines = df_cuisines.join(df.drop('Cuisines', axis=1))
+
+# 1. Relationship between Cuisine Type and Rating
+cuisine_rating = df_cuisines.groupby('Cuisine')['Aggregate rating'].mean().sort_values(ascending=False)
+print("Average Rating by Cuisine:")
+print(cuisine_rating)
+
+# 2. Most Popular Cuisines Based on Number of Votes
+cuisine_votes = df_cuisines.groupby('Cuisine')['Votes'].sum().sort_values(ascending=False)
+print("\nMost Popular Cuisines by Votes:")
+print(cuisine_votes)
+
+# 3. Cuisines with Higher Ratings
+top_cuisines_by_rating = cuisine_rating.head(10)
+print("\nTop 10 Cuisines by Average Rating:")
+print(top_cuisines_by_rating)
+
+plt.figure(figsize=(12, 6))
+top_cuisines_by_rating.plot(kind='bar', color='skyblue')
+plt.title('Top 10 Cuisines by Average Rating')
+plt.xlabel('Cuisine')
+plt.ylabel('Average Rating')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(12, 6))
+cuisine_votes.head(10).plot(kind='bar', color='skyblue')
+plt.title('Top 10 Cuisines by Total Votes')
+plt.xlabel('Cuisine')
+plt.ylabel('Total Votes')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(10, 6))
+plt.hist(df['Aggregate rating'], bins=10, color='skyblue', edgecolor='black')
+plt.title('Distribution of Aggregate Ratings')
+plt.xlabel('Aggregate Rating')
+plt.ylabel('Frequency')
+plt.show()
+
+average_rating_cuisine = df_cuisines.groupby('Cuisine')['Aggregate rating'].mean().sort_values(ascending=False).head(10)
+
+plt.figure(figsize=(12, 6))
+average_rating_cuisine.plot(kind='bar', color='skyblue')
+plt.title('Top 10 Cuisines by Average Rating')
+plt.xlabel('Cuisine')
+plt.ylabel('Average Rating')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+average_rating_city = df.groupby('City')['Aggregate rating'].mean().sort_values(ascending=False).head(10)
+
+plt.figure(figsize=(12, 6))
+average_rating_city.plot(kind='bar', color='skyblue')
+plt.title('Top 10 Cities by Average Rating')
+plt.xlabel('City')
+plt.ylabel('Average Rating')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+plt.figure(figsize=(10, 6))
+plt.scatter(df['Votes'], df['Aggregate rating'], alpha=0.5, color='skyblue')
+plt.title('Votes vs Aggregate Rating')
+plt.xlabel('Votes')
+plt.ylabel('Aggregate Rating')
+plt.show()
+
+plt.figure(figsize=(10, 6))
+df.boxplot(column='Aggregate rating', by='Price range', grid=False, showfliers=False, patch_artist=True,
+           boxprops=dict(facecolor='skyblue', color='black'),
+           medianprops=dict(color='red'))
+plt.title('Aggregate Rating by Price Range')
+plt.suptitle('')
+plt.xlabel('Price Range')
+plt.ylabel('Aggregate Rating')
+plt.show()
